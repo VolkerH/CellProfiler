@@ -785,20 +785,23 @@ class IdentifyPrimaryObjects(identify.Identify):
     def basic(self):
         return not self.advanced
 
+    def remove_holes(self, image, size):
+        # Remove holes with an area up to size diameter.
+        # If size is greater than any image dimension, use the smallest image dimension - 2.
+        # Otherwise, remove_small_holes returns an all True image.
+        size = min(size, *(numpy.array(image.shape) - 2))
+
+        return skimage.morphology.remove_small_holes(image, size ** image.ndim)
+
     def run(self, workspace):
         image_name = self.image_name.value
         image = workspace.image_set.get_image(image_name)
         workspace.display_data.statistics = []
         binary_image = self.threshold_image(image_name, workspace, automatic=self.basic)
 
-        #
         # Fill background holes inside foreground objects
-        #
-        def size_fn(size, is_foreground):
-            return size < self.size_range.max * self.size_range.max
-
         if self.basic or self.fill_holes.value == FH_THRESHOLDING:
-            binary_image = centrosome.cpmorphology.fill_labeled_holes(binary_image, size_fn=size_fn)
+            binary_image = self.remove_holes(binary_image, self.size_range.max)
 
         labeled_image, object_count = scipy.ndimage.label(binary_image, numpy.ones((3, 3), bool))
 

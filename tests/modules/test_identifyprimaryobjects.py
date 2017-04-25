@@ -1905,7 +1905,7 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
         x.use_advanced.value = True
         x.exclude_size.value = True
         x.size_range.min = 6
-        x.size_range.max = 50
+        x.size_range.max = 20
         x.maxima_suppression_size.value = 3
         x.automatic_suppression.value = False
         x.watershed_method.value = cellprofiler.modules.identifyprimaryobjects.WA_INTENSITY
@@ -1917,6 +1917,7 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
         measurements = workspace.measurements
         x.run(workspace)
         my_objects = workspace.object_set.get_objects(OBJECTS_NAME)
+
         self.assertTrue(my_objects.segmented[3, 3] != 0)
         if my_objects.unedited_segmented[3, 3] == 2:
             unedited_segmented = my_objects.unedited_segmented
@@ -2033,6 +2034,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
 
         x = cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects()
         x.use_advanced.value = True
+        x.size_range.min = 3
+        x.size_range.max = 10
         x.object_name.value = "my_object"
         x.image_name.value = "my_image"
         x.exclude_size.value = False
@@ -2073,6 +2076,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
 
         x = cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects()
         x.use_advanced.value = True
+        x.size_range.min = 3
+        x.size_range.max = 10
         x.object_name.value = "my_object"
         x.image_name.value = "my_image"
         x.exclude_size.value = False
@@ -2113,6 +2118,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
 
         x = cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects()
         x.use_advanced.value = True
+        x.size_range.min = 2
+        x.size_range.max = 8
         x.object_name.value = "MyObject"
         x.image_name.value = "MyImage"
         x.exclude_size.value = False
@@ -2151,6 +2158,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
         workspace, module = self.make_workspace(image)
         assert isinstance(module, cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects)
         module.use_advanced.value = True
+        module.size_range.min = 1
+        module.size_range.max = 4
         module.exclude_size.value = False
         module.unclump_method.value = cellprofiler.modules.identifyprimaryobjects.UN_NONE
         module.watershed_method.value = cellprofiler.modules.identifyprimaryobjects.WA_NONE
@@ -2181,6 +2190,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
         workspace, module = self.make_workspace(image)
         assert isinstance(module, cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects)
         module.use_advanced.value = True
+        module.size_range.min = 1
+        module.size_range.max = 4
         module.exclude_size.value = False
         module.unclump_method.value = cellprofiler.modules.identifyprimaryobjects.UN_NONE
         module.watershed_method.value = cellprofiler.modules.identifyprimaryobjects.WA_NONE
@@ -2211,6 +2222,8 @@ IdentifyPrimaryObjects:[module_num:3|svn_version:\'Unknown\'|variable_revision_n
             workspace, module = self.make_workspace(image)
             assert isinstance(module, cellprofiler.modules.identifyprimaryobjects.IdentifyPrimaryObjects)
             module.use_advanced.value = True
+            module.size_range.min = 1
+            module.size_range.max = 4
             module.exclude_size.value = False
             module.unclump_method.value = cellprofiler.modules.identifyprimaryobjects.UN_NONE
             module.watershed_method.value = cellprofiler.modules.identifyprimaryobjects.WA_NONE
