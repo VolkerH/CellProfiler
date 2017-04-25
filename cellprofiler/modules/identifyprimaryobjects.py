@@ -5,12 +5,15 @@ import centrosome.cpmorphology
 import centrosome.outline
 import centrosome.propagate
 import centrosome.threshold
+import mahotas
 import numpy
 import scipy.ndimage
 import scipy.sparse
+import skimage.filters
 import skimage.measure
 import skimage.morphology
 import skimage.morphology.watershed
+import skimage.transform
 
 import cellprofiler.gui.help
 import cellprofiler.object
@@ -805,13 +808,7 @@ class IdentifyPrimaryObjects(identify.Identify):
         if self.basic or self.fill_holes.value == FH_THRESHOLDING:
             binary_image = self.remove_holes(binary_image, self.size_range.max)
 
-        labeled_image, object_count = skimage.measure.label(binary_image, return_num=True)
-
-        labeled_image, object_count, maxima_suppression_size = self.separate_neighboring_objects(
-            workspace,
-            labeled_image,
-            object_count
-        )
+        labeled_image, object_count = self._watershed(image, binary_image)
 
         unedited_labels = labeled_image.copy()
 
@@ -880,7 +877,7 @@ class IdentifyPrimaryObjects(identify.Identify):
                     statistics.append(["Declumping smoothing filter size",
                                        "%.1f" % (self.calc_smoothing_filter_size())])
                     statistics.append(["Maxima suppression size",
-                                       "%.1f" % maxima_suppression_size])
+                                       "%.1f" % self._maxima_suppression_size()])
             workspace.display_data.image = image.pixel_data
             workspace.display_data.labeled_image = labeled_image
             workspace.display_data.size_excluded_labels = size_excluded_labeled_image
@@ -917,200 +914,95 @@ class IdentifyPrimaryObjects(identify.Identify):
 
         return labeled_image, object_count
 
-    def smooth_image(self, image, mask):
-        """Apply the smoothing filter to the image"""
+    def _maxima_suppression_size(self):
+        if (self.basic or self.low_res_maxima.value) and self.automatic_suppression.value and self.size_range.min > 10:
+            return 7
 
-        filter_size = self.calc_smoothing_filter_size()
-        if filter_size == 0:
-            return image
-        sigma = filter_size / 2.35
-        #
-        # We not only want to smooth using a Gaussian, but we want to limit
-        # the spread of the smoothing to 2 SD, partly to make things happen
-        # locally, partly to make things run faster, partly to try to match
-        # the Matlab behavior.
-        #
-        filter_size = max(int(float(filter_size) / 2.0), 1)
-        f = (1 / numpy.sqrt(2.0 * numpy.pi) / sigma *
-             numpy.exp(-0.5 * numpy.arange(-filter_size, filter_size + 1) ** 2 /
-                       sigma ** 2))
+        if self.basic or self.automatic_suppression.value:
+            return self.size_range.min / 1.5
 
-        def fgaussian(image):
-            output = scipy.ndimage.convolve1d(image, f,
-                                              axis=0,
-                                              mode='constant')
-            return scipy.ndimage.convolve1d(output, f,
-                                            axis=1,
-                                            mode='constant')
+        return self.maxima_suppression_size.value
 
-        #
-        # Use the trick where you similarly convolve an array of ones to find
-        # out the edge effects, then divide to correct the edge effects
-        #
-        edge_array = fgaussian(mask.astype(float))
-        masked_image = image.copy()
-        masked_image[~mask] = 0
-        smoothed_image = fgaussian(masked_image)
-        masked_image[mask] = smoothed_image[mask] / edge_array[mask]
-        return masked_image
+    def _watershed(self, image, binary_image):
+        if self.watershed_method.value == WA_NONE:
+            return skimage.measure.label(binary_image, return_num=True)
 
-    def separate_neighboring_objects(self, workspace, labeled_image,
-                                     object_count):
-        """Separate objects based on local maxima or distance transform
+        data = image.pixel_data
 
-        workspace - get the image from here
+        mask = image.mask
 
-        labeled_image - image labeled by scipy.ndimage.label
-
-        object_count  - # of objects in image
-
-        returns revised labeled_image, object count, maxima_suppression_size,
-        LoG threshold and filter diameter
-        """
-        if self.advanced and (self.unclump_method == UN_NONE or self.watershed_method == WA_NONE):
-            return labeled_image, object_count, 7
-
-        cpimage = workspace.image_set.get_image(
-                self.image_name.value, must_be_grayscale=True)
-        image = cpimage.pixel_data
-        mask = cpimage.mask
-
-        blurred_image = self.smooth_image(image, mask)
         if self.size_range.min > 10 and (self.basic or self.low_res_maxima.value):
-            image_resize_factor = 10.0 / float(self.size_range.min)
-            if self.basic or self.automatic_suppression.value:
-                maxima_suppression_size = 7
-            else:
-                maxima_suppression_size = (self.maxima_suppression_size.value *
-                                           image_resize_factor + .5)
-            reported_maxima_suppression_size = \
-                maxima_suppression_size / image_resize_factor
-        else:
-            image_resize_factor = 1.0
-            if self.basic or self.automatic_suppression.value:
-                maxima_suppression_size = self.size_range.min / 1.5
-            else:
-                maxima_suppression_size = self.maxima_suppression_size.value
-            reported_maxima_suppression_size = maxima_suppression_size
-        maxima_mask = centrosome.cpmorphology.strel_disk(max(1, maxima_suppression_size - .5))
-        distance_transformed_image = None
-        if self.basic or self.unclump_method == UN_INTENSITY:
-            # Remove dim maxima
-            maxima_image = self.get_maxima(blurred_image,
-                                           labeled_image,
-                                           maxima_mask,
-                                           image_resize_factor)
-        elif self.unclump_method == UN_SHAPE:
-            if self.fill_holes == FH_NEVER:
-                # For shape, even if the user doesn't want to fill holes,
-                # a point far away from the edge might be near a hole.
-                # So we fill just for this part.
-                foreground = centrosome.cpmorphology.fill_labeled_holes(labeled_image) > 0
-            else:
-                foreground = labeled_image > 0
-            distance_transformed_image = \
-                scipy.ndimage.distance_transform_edt(foreground)
-            # randomize the distance slightly to get unique maxima
-            numpy.random.seed(0)
-            distance_transformed_image += \
-                numpy.random.uniform(0, .001, distance_transformed_image.shape)
-            maxima_image = self.get_maxima(distance_transformed_image,
-                                           labeled_image,
-                                           maxima_mask,
-                                           image_resize_factor)
-        else:
-            raise ValueError("Unsupported local maxima method: %s" % self.unclump_method.value)
+            factor = 10.0 / float(self.size_range.min)
 
-        # Create the image for watershed
-        if self.basic or self.watershed_method == WA_INTENSITY:
-            # use the reverse of the image to get valleys at peaks
-            watershed_image = 1 - image
-        elif self.watershed_method == WA_SHAPE:
-            if distance_transformed_image is None:
-                distance_transformed_image = \
-                    scipy.ndimage.distance_transform_edt(labeled_image > 0)
-            watershed_image = -distance_transformed_image
-            watershed_image = watershed_image - numpy.min(watershed_image)
-        elif self.watershed_method == WA_PROPAGATE:
-            # No image used
-            pass
-        else:
-            raise NotImplementedError("Watershed method %s is not implemented" % self.watershed_method.value)
-        #
-        # Create a marker array where the unlabeled image has a label of
-        # -(nobjects+1)
-        # and every local maximum has a unique label which will become
-        # the object's label. The labels are negative because that
-        # makes the watershed algorithm use FIFO for the pixels which
-        # yields fair boundaries when markers compete for pixels.
-        #
-        labeled_maxima, object_count = \
-            scipy.ndimage.label(maxima_image, numpy.ones((3, 3), bool))
-        if self.advanced and self.watershed_method == WA_PROPAGATE:
-            watershed_boundaries, distance = \
-                centrosome.propagate.propagate(numpy.zeros(labeled_maxima.shape),
-                                               labeled_maxima,
-                                               labeled_image != 0, 1.0)
-        else:
-            markers_dtype = (numpy.int16
-                             if object_count < numpy.iinfo(numpy.int16).max
-                             else numpy.int32)
-            markers = numpy.zeros(watershed_image.shape, markers_dtype)
-            markers[labeled_maxima > 0] = -labeled_maxima[labeled_maxima > 0]
+            data = scipy.ndimage.zoom(data, factor, order=3)
 
-            #
-            # Some labels have only one maker in them, some have multiple and
-            # will be split up.
-            #
+            mask = scipy.ndimage.zoom(mask, factor, order=0)
 
-            watershed_boundaries = skimage.morphology.watershed(
-                connectivity=numpy.ones((3, 3), bool),
+            binary_image = scipy.ndimage.zoom(binary_image, factor, order=0)
+
+        markers = skimage.measure.label(self._markers(data, binary_image, mask))
+
+        if self.basic or self.watershed_method.value in [WA_INTENSITY, WA_SHAPE]:
+            if self.basic or self.watershed_method.value == WA_INTENSITY:
+                watershed_image = 1.0 - data
+            else:
+                watershed_image = -scipy.ndimage.distance_transform_edt(binary_image > 0)
+
+                watershed_image -= watershed_image.min()
+
+            watershed = -skimage.morphology.watershed(
+                connectivity=numpy.ones((3, 3), dtype=numpy.bool),
                 image=watershed_image,
-                markers=markers,
-                mask=labeled_image != 0
+                markers=-markers,
+                mask=binary_image
+            )
+        else:  # self.advanced and self.watershed_method.value == WA_PROPAGATE
+            watershed, _ = centrosome.propagate.propagate(
+                numpy.zeros(markers.shape),
+                markers,
+                binary_image,
+                1.0
             )
 
-            watershed_boundaries = -watershed_boundaries
+        if self.size_range.min > 10 and (self.basic or self.low_res_maxima.value):
+            watershed = skimage.transform.resize(watershed, image.pixel_data.shape, order=0, preserve_range=True)
 
-        return watershed_boundaries, object_count, reported_maxima_suppression_size
+        return skimage.measure.label(watershed, return_num=True)
 
-    def get_maxima(self, image, labeled_image, maxima_mask, image_resize_factor):
-        if image_resize_factor < 1.0:
-            shape = numpy.array(image.shape) * image_resize_factor
-            i_j = (numpy.mgrid[0:shape[0], 0:shape[1]].astype(float) /
-                   image_resize_factor)
-            resized_image = scipy.ndimage.map_coordinates(image, i_j)
-            resized_labels = scipy.ndimage.map_coordinates(
-                    labeled_image, i_j, order=0).astype(labeled_image.dtype)
+    def _markers(self, image, binary_image, mask):
+        if self.unclump_method.value == UN_NONE:
+            return binary_image
 
-        else:
-            resized_image = image
-            resized_labels = labeled_image
-        #
-        # find local maxima
-        #
-        if maxima_mask is not None:
-            binary_maxima_image = centrosome.cpmorphology.is_local_maximum(resized_image,
-                                                                           resized_labels,
-                                                                           maxima_mask)
-            binary_maxima_image[resized_image <= 0] = 0
-        else:
-            binary_maxima_image = (resized_image > 0) & (labeled_image > 0)
-        if image_resize_factor < 1.0:
-            inverse_resize_factor = (float(image.shape[0]) /
-                                     float(binary_maxima_image.shape[0]))
-            i_j = (numpy.mgrid[0:image.shape[0],
-                   0:image.shape[1]].astype(float) /
-                   inverse_resize_factor)
-            binary_maxima_image = scipy.ndimage.map_coordinates(
-                    binary_maxima_image.astype(float), i_j) > .5
-            assert (binary_maxima_image.shape[0] == image.shape[0])
-            assert (binary_maxima_image.shape[1] == image.shape[1])
+        if self.basic or self.unclump_method.value == UN_INTENSITY:
+            declumping_image = image
 
-        # Erode blobs of touching maxima to a single point
+            filter_size = self.calc_smoothing_filter_size()
 
-        shrunk_image = centrosome.cpmorphology.binary_shrink(binary_maxima_image)
-        return shrunk_image
+            if filter_size > 0:
+                sigma = filter_size / 2.35
+
+                declumping_image = skimage.filters.gaussian(declumping_image, sigma=sigma)
+
+            declumping_image[~mask] = 0
+        else:  # self.unclump_method.value == UN_SHAPE:
+            foreground = scipy.ndimage.binary_fill_holes(binary_image)
+
+            declumping_image = scipy.ndimage.distance_transform_edt(foreground)
+
+            # randomize the distance slightly to get unique maxima
+            numpy.random.seed(0)
+
+            declumping_image += numpy.random.uniform(0, .001, declumping_image.shape)
+
+        footprint = skimage.morphology.square(max(1, int(self._maxima_suppression_size())))
+
+        maxima_image = scipy.ndimage.filters.maximum_filter(declumping_image, footprint=footprint)
+
+        maxima = mahotas.regmax(maxima_image, footprint)
+
+        maxima[~binary_image] = 0
+
+        return maxima
 
     def filter_on_size(self, labeled_image, object_count):
         """ Filter the labeled image based on the size range

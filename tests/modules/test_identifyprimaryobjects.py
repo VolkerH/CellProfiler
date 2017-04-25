@@ -602,7 +602,7 @@ class TestIdentifyPrimaryObjects(unittest.TestCase):
         x.fill_holes.value = False
         x.smoothing_filter_size.value = 0
         x.automatic_smoothing.value = False
-        x.maxima_suppression_size.value = 7.1
+        x.maxima_suppression_size.value = 2
         x.automatic_suppression.value = False
         x.unclump_method.value = cellprofiler.modules.identifyprimaryobjects.UN_INTENSITY
         x.watershed_method.value = cellprofiler.modules.identifyprimaryobjects.WA_SHAPE
@@ -767,7 +767,7 @@ class TestIdentifyPrimaryObjects(unittest.TestCase):
         x.fill_holes.value = False
         x.smoothing_filter_size.value = 0
         x.automatic_smoothing.value = 0
-        x.maxima_suppression_size.value = 7
+        x.maxima_suppression_size.value = 4
         x.automatic_suppression.value = False
         x.manual_threshold.value = .3
         x.unclump_method.value = cellprofiler.modules.identifyprimaryobjects.UN_INTENSITY
