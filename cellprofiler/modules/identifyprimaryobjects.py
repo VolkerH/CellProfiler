@@ -8,6 +8,8 @@ import centrosome.threshold
 import numpy
 import scipy.ndimage
 import scipy.sparse
+import skimage.measure
+import skimage.morphology
 import skimage.morphology.watershed
 
 import cellprofiler.gui.help
@@ -803,7 +805,7 @@ class IdentifyPrimaryObjects(identify.Identify):
         if self.basic or self.fill_holes.value == FH_THRESHOLDING:
             binary_image = self.remove_holes(binary_image, self.size_range.max)
 
-        labeled_image, object_count = scipy.ndimage.label(binary_image, numpy.ones((3, 3), bool))
+        labeled_image, object_count = skimage.measure.label(binary_image, return_num=True)
 
         labeled_image, object_count, maxima_suppression_size = self.separate_neighboring_objects(
             workspace,
