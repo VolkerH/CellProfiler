@@ -68,8 +68,8 @@ class TestKnimeBridge(unittest.TestCase):
         pipeline.add_module(load_images)
         identify = IdentifyPrimaryObjects()
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         pipeline.add_module(identify)
 
         pipeline_txt = StringIO()
@@ -122,8 +122,8 @@ class TestKnimeBridge(unittest.TestCase):
         pipeline.add_module(load_images)
         identify = IdentifyPrimaryObjects()
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         pipeline.add_module(identify)
         saveimages = SaveImages()
         saveimages.module_num = 3
@@ -164,8 +164,8 @@ class TestKnimeBridge(unittest.TestCase):
         identify = IdentifyPrimaryObjects()
         identify.use_advanced.value = True
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         identify.threshold_scope.value = TS_GLOBAL
         identify.global_operation.value = TM_MANUAL
         identify.manual_threshold.value = .5
@@ -208,8 +208,8 @@ class TestKnimeBridge(unittest.TestCase):
         pipeline.add_module(load_images)
         identify = IdentifyPrimaryObjects()
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         identify.threshold_scope.value = TS_GLOBAL
         identify.global_operation.value = TM_MANUAL
         identify.manual_threshold.value = .5
@@ -253,8 +253,8 @@ class TestKnimeBridge(unittest.TestCase):
         identify = IdentifyPrimaryObjects()
         identify.module_num = 2
         identify.use_advanced.value = True
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         identify.threshold_scope.value = TS_GLOBAL
         identify.global_operation.value = TM_MANUAL
         identify.manual_threshold.value = .5
@@ -315,8 +315,8 @@ class TestKnimeBridge(unittest.TestCase):
         identify = IdentifyPrimaryObjects()
         identify.use_advanced.value = True
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         identify.threshold_scope.value = TS_GLOBAL
         identify.global_operation.value = TM_MANUAL
         identify.manual_threshold.value = .5
@@ -364,8 +364,8 @@ class TestKnimeBridge(unittest.TestCase):
         pipeline.add_module(load_images)
         identify = IdentifyPrimaryObjects()
         identify.module_num = 2
-        identify.image_name.value = "Foo"
-        identify.object_name.value = "dizzy"
+        identify.x_name.value = "Foo"
+        identify.y_name.value = "dizzy"
         identify.threshold_scope.value = TS_GLOBAL
         identify.global_operation.value = TM_MANUAL
         identify.manual_threshold.value = .5

@@ -605,7 +605,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
         module.assign_middle_to_foreground.value = cellprofiler.modules.applythreshold.O_BACKGROUND
         module.run(workspace)
         m = workspace.measurements
-        m_threshold = m[cellprofiler.measurement.IMAGE, cellprofiler.measurement.FF_ORIG_THRESHOLD % module.get_measurement_objects_name()]
+        m_threshold = m[cellprofiler.measurement.IMAGE, cellprofiler.measurement.FF_ORIG_THRESHOLD % module.y_name.value]
         self.assertAlmostEqual(m_threshold, threshold)
 
     def test_05_04_otsu3_high(self):
@@ -626,7 +626,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
         module.assign_middle_to_foreground.value = cellprofiler.modules.applythreshold.O_FOREGROUND
         module.run(workspace)
         m = workspace.measurements
-        m_threshold = m[cellprofiler.measurement.IMAGE, cellprofiler.measurement.FF_ORIG_THRESHOLD % module.get_measurement_objects_name()]
+        m_threshold = m[cellprofiler.measurement.IMAGE, cellprofiler.measurement.FF_ORIG_THRESHOLD % module.y_name.value]
         self.assertAlmostEqual(m_threshold, threshold)
 
     def test_06_01_adaptive_otsu_small(self):
@@ -649,7 +649,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
         workspace, x = self.make_workspace(image)
         x.threshold_scope.value = centrosome.threshold.TM_ADAPTIVE
         x.global_operation.value = centrosome.threshold.TM_OTSU
-        threshold, global_threshold = x.get_threshold(
+        threshold, global_threshold = x._get_threshold(
             cellprofiler.image.Image(image, mask=numpy.ones_like(image, bool)),
             workspace
         )
@@ -677,7 +677,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
         workspace, x = self.make_workspace(image)
         x.threshold_scope.value = centrosome.threshold.TM_ADAPTIVE
         x.global_operation.value = centrosome.threshold.TM_OTSU
-        threshold, global_threshold = x.get_threshold(
+        threshold, global_threshold = x._get_threshold(
             cellprofiler.image.Image(image, mask=numpy.ones_like(image, bool)),
             workspace
         )
@@ -706,14 +706,14 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
                 workspace, x = self.make_workspace(image, mask)
                 x.global_operation.value = threshold_method
                 x.threshold_scope.value = cellprofiler.modules.identify.TS_GLOBAL
-                l, g = x.get_threshold(
+                l, g = x._get_threshold(
                     cellprofiler.image.Image(image, mask=mask),
                     workspace
                 )
                 v = image[mask]
                 image = r.uniform(size=(9, 11))
                 image[mask] = v
-                l1, g1 = x.get_threshold(
+                l1, g1 = x._get_threshold(
                     cellprofiler.image.Image(image, mask=mask),
                     workspace
                 )
@@ -726,7 +726,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
         x.threshold_scope.value = cellprofiler.modules.applythreshold.TS_GLOBAL
         x.global_operation.value = cellprofiler.modules.applythreshold.TM_MANUAL
         x.manual_threshold.value = .5
-        local_threshold, threshold = x.get_threshold(
+        local_threshold, threshold = x._get_threshold(
             cellprofiler.image.Image(numpy.zeros((10, 10)), mask=numpy.ones((10, 10), bool)),
             workspace
         )
@@ -742,7 +742,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.global_operation.value = cellprofiler.modules.applythreshold.TM_LI
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         numpy.testing.assert_almost_equal(t_local, 0.1)
 
@@ -767,7 +767,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.global_operation.value = cellprofiler.modules.applythreshold.TM_LI
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         numpy.testing.assert_almost_equal(t_local, 0.0)
 
@@ -788,7 +788,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.global_operation.value = cellprofiler.modules.applythreshold.TM_LI
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         numpy.testing.assert_almost_equal(t_local, 0.0)
 
@@ -807,7 +807,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.global_operation.value = cellprofiler.modules.applythreshold.TM_LI
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         expected = skimage.filters.threshold_li(data)
 
@@ -830,7 +830,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.threshold_range.maximum = 0.0  # expected to be ignored
 
-        t_local, t_global = module.get_threshold(image, workspace, automatic=True)
+        t_local, t_global = module._get_threshold(image, workspace, automatic=True)
 
         expected = skimage.filters.threshold_li(data)
 
@@ -855,7 +855,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.global_operation.value = cellprofiler.modules.applythreshold.TM_LI
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         expected = skimage.filters.threshold_li(data)
 
@@ -880,7 +880,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.variance_method.value = cellprofiler.modules.applythreshold.RB_SD
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_ROBUST_BACKGROUND,
@@ -917,7 +917,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.variance_method.value = cellprofiler.modules.applythreshold.RB_SD
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_ROBUST_BACKGROUND,
@@ -954,7 +954,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.variance_method.value = cellprofiler.modules.applythreshold.RB_SD
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_ROBUST_BACKGROUND,
@@ -991,7 +991,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.variance_method.value = cellprofiler.modules.applythreshold.RB_MAD
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_ROBUST_BACKGROUND,
@@ -1030,7 +1030,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected = numpy.zeros_like(data)
 
@@ -1063,7 +1063,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_global_expected = 0.2
 
@@ -1090,7 +1090,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_global_expected = 0.2
 
@@ -1121,7 +1121,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_global_expected = skimage.filters.threshold_otsu(data[mask])
 
@@ -1166,7 +1166,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_global_expected = skimage.filters.threshold_otsu(data[mask])
 
@@ -1216,7 +1216,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_OTSU,
@@ -1258,7 +1258,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_local_expected, t_global_expected = centrosome.threshold.get_threshold(
             centrosome.threshold.TM_OTSU,
@@ -1300,7 +1300,7 @@ ApplyThreshold:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:10
 
         module.adaptive_window_size.value = 3
 
-        t_local, t_global = module.get_threshold(image, workspace)
+        t_local, t_global = module._get_threshold(image, workspace)
 
         t_global_expected = centrosome.threshold.get_otsu_threshold(
             image.pixel_data,
